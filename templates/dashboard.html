@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>DHT11 — Dernière mesure</title>
+</head>
+<body>
+  <h1>Dernière mesure</h1>
+
+  <p>Température : <span id="temp">--</span> °C</p>
+  <p>Humidité : <span id="hum">--</span> %</p>
+  <p>Horodatage : <span id="time">--</span></p>
+
+  <button id="refresh">Rafraîchir</button>
+  <p id="status">Prêt.</p>
+
+  <script src="{% static 'js/app.js' %}"></script>
+<div>
+  <h3>Température : <span id="temperature">--</span></h3>
+  <h3>Humidité : <span id="humidity">--</span></h3>
+</div>
+</body>
+</html>
