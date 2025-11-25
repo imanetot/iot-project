@@ -4,299 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard IoT - DHT11</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-
-        /* Navigation */
-        .navbar {
-            background: #000;
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .navbar-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #fff;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: #b0b0b0;
-            text-decoration: none;
-            transition: color 0.3s;
-            font-weight: 500;
-        }
-
-        .nav-links a:hover {
-            color: #fff;
-        }
-
-        /* Container */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        /* Header */
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            color: #fff;
-            margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-            color: #888;
-            font-size: 1.1rem;
-        }
-
-        /* Live Section */
-        .live-section {
-            background: #2a2a2a;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid #3a3a3a;
-        }
-
-        .live-title {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: #fff;
-            text-align: center;
-        }
-
-        .live-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .live-card {
-            background: linear-gradient(135deg, #333 0%, #222 100%);
-            padding: 2rem;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #444;
-            transition: transform 0.3s;
-        }
-
-        .live-card:hover {
-            transform: translateY(-5px);
-            border-color: #666;
-        }
-
-        .live-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .live-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 0.5rem;
-        }
-
-        .live-label {
-            color: #888;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .live-time-info {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: #666;
-        }
-
-        /* Chart Section */
-        .chart-container {
-            background: #2a2a2a;
-            padding: 2rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
-            border: 1px solid #3a3a3a;
-        }
-
-        .chart-container h2 {
-            color: #fff;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-
-        canvas {
-            max-height: 400px;
-        }
-
-        /* Filter Buttons */
-        .filter-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            background: #333;
-            color: #fff;
-            border: 2px solid #444;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .btn:hover {
-            background: #444;
-            border-color: #666;
-            transform: translateY(-2px);
-        }
-
-        .btn.active {
-            background: #555;
-            border-color: #777;
-        }
-
-        /* Statistics Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #2a2a2a 0%, #222 100%);
-            padding: 1.5rem;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #3a3a3a;
-            transition: transform 0.3s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: #4a4a4a;
-        }
-
-        .stat-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 0.3rem;
-        }
-
-        .stat-label {
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        /* Action Buttons */
-        .actions {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin: 2rem 0;
-            flex-wrap: wrap;
-        }
-
-        .btn-secondary {
-            padding: 1rem 2rem;
-            background: #333;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 8px;
-            border: 2px solid #444;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .btn-secondary:hover {
-            background: #444;
-            border-color: #666;
-            transform: translateY(-2px);
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: #666;
-            border-top: 1px solid #333;
-        }
-
-        #status {
-            font-weight: 500;
-        }
-
-        .status-online {
-            color: #4caf50;
-        }
-
-        .status-offline {
-            color: #f44336;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                gap: 1rem;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .live-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 
 <body>
@@ -306,7 +14,8 @@
             <a href="/" class="logo">🌡️ DHT11 Monitor</a>
             <ul class="nav-links">
                 <li><a href="/">Dashboard</a></li>
-                <li><a href="/myChart/">Graphiques</a></li>
+                <li><a href="/graph_temp/">Graphique Temp</a></li>
+                <li><a href="/graph_hum/">Graphique Hum</a></li>
                 <li><a href="/api/">API Données</a></li>
                 <li><a href="/download_csv/">Export CSV</a></li>
                 <li><a href="/admin/">Admin</a></li>
@@ -330,6 +39,7 @@
                     <div class="live-value" id="tempValue">--</div>
                     <div class="live-label">Température</div>
                     <div class="live-time-info" id="tempTime">Chargement...</div>
+                    <a href="/graph_temp/" class="btn-graph-small">📈 Voir Graphique</a>
                 </div>
 
                 <div class="live-card">
@@ -337,6 +47,7 @@
                     <div class="live-value" id="humValue">--</div>
                     <div class="live-label">Humidité</div>
                     <div class="live-time-info" id="humTime">Chargement...</div>
+                    <a href="/graph_hum/" class="btn-graph-small">📈 Voir Graphique</a>
                 </div>
 
                 <div class="live-card">
@@ -347,24 +58,67 @@
             </div>
         </div>
 
+        <!-- Section Incidents -->
+        <div class="incident-section">
+            <h2 class="live-title">🚨 Gestion des Incidents</h2>
+
+            <div id="incident-status" class="incident-status-ok">
+                ✅ Pas d'incidents
+            </div>
+
+            <div id="incident-details" class="incident-details-hidden">
+                <div class="incident-counter-box">
+                    <p class="incident-counter-text">
+                        <strong>Compteur d'incidents:</strong>
+                        <span id="incident-compteur" class="incident-compteur-value">0</span>
+                    </p>
+                </div>
+
+                <!-- Opération 1 -->
+                <div id="op1-container" class="operation-container op1-hidden">
+                    <div class="operation-header">
+                        <input type="checkbox" id="op1-check" class="operation-checkbox">
+                        <label for="op1-check" class="operation-label">Opération Corrective 1 (Compteur ≥ 1)</label>
+                    </div>
+                    <textarea id="op1-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea"></textarea>
+                </div>
+
+                <!-- Opération 2 -->
+                <div id="op2-container" class="operation-container op2-hidden">
+                    <div class="operation-header">
+                        <input type="checkbox" id="op2-check" class="operation-checkbox">
+                        <label for="op2-check" class="operation-label">Opération Corrective 2 (Compteur ≥ 4)</label>
+                    </div>
+                    <textarea id="op2-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea"></textarea>
+                </div>
+
+                <!-- Opération 3 -->
+                <div id="op3-container" class="operation-container op3-hidden">
+                    <div class="operation-header">
+                        <input type="checkbox" id="op3-check" class="operation-checkbox">
+                        <label for="op3-check" class="operation-label">Opération Corrective 3 (Compteur ≥ 7)</label>
+                    </div>
+                    <textarea id="op3-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea"></textarea>
+                </div>
+
+                <button onclick="saveIncident()" class="btn-save-incident">
+                    💾 Enregistrer les Opérations
+                </button>
+            </div>
+
+            <div class="archive-link-container">
+                <a href="/archive-incidents/" class="btn-archive">
+                    📂 Voir Archive des Incidents
+                </a>
+            </div>
+        </div>
+
         <!-- Chart Filters -->
         <div class="filter-buttons">
             <button class="btn active" onclick="loadChartData('all')">Toutes les données</button>
             <button class="btn" onclick="loadChartData('jour')">24 heures</button>
             <button class="btn" onclick="loadChartData('semaine')">7 jours</button>
             <button class="btn" onclick="loadChartData('mois')">30 jours</button>
-        </div>
-
-        <!-- Chart Section - Temperature -->
-        <div class="chart-container">
-            <h2>🌡️ Évolution de la Température</h2>
-            <canvas id="tempChart"></canvas>
-        </div>
-
-        <!-- Chart Section - Humidity -->
-        <div class="chart-container">
-            <h2>💧 Évolution de l'Humidité</h2>
-            <canvas id="humChart"></canvas>
         </div>
 
         <!-- Statistics -->
@@ -407,231 +161,6 @@
         </footer>
     </div>
 
-    <script>
-        // Configuration des graphiques
-        const ctxTemp = document.getElementById('tempChart').getContext('2d');
-        const ctxHum = document.getElementById('humChart').getContext('2d');
-
-        const tempChart = new Chart(ctxTemp, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Température (°C)',
-                    data: [],
-                    borderColor: '#e0e0e0',
-                    backgroundColor: 'rgba(224, 224, 224, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#e0e0e0',
-                            font: { size: 14, weight: '600' }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        titleColor: '#fff',
-                        bodyColor: '#e0e0e0',
-                        borderColor: '#666',
-                        borderWidth: 1
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#888' },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    },
-                    y: {
-                        ticks: { color: '#888' },
-                        grid: { color: 'rgba(255, 255, 255, 0.08)' },
-                        title: {
-                            display: true,
-                            text: 'Température (°C)',
-                            color: '#888'
-                        }
-                    }
-                }
-            }
-        });
-
-        const humChart = new Chart(ctxHum, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Humidité (%)',
-                    data: [],
-                    borderColor: '#888',
-                    backgroundColor: 'rgba(136, 136, 136, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#e0e0e0',
-                            font: { size: 14, weight: '600' }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        titleColor: '#fff',
-                        bodyColor: '#e0e0e0',
-                        borderColor: '#666',
-                        borderWidth: 1
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#888' },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    },
-                    y: {
-                        ticks: { color: '#888' },
-                        grid: { color: 'rgba(255, 255, 255, 0.08)' },
-                        beginAtZero: true,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Humidité (%)',
-                            color: '#888'
-                        }
-                    }
-                }
-            }
-        });
-
-        // Fonction pour mettre à jour l'heure
-        function updateLiveTime() {
-            const now = new Date();
-            document.getElementById('live-time').textContent = now.toLocaleTimeString('fr-FR');
-        }
-
-        // Fonction pour charger les dernières données
-        async function loadLatest() {
-            try {
-                const res = await fetch("/latest/");
-                const data = await res.json();
-
-                document.getElementById("tempValue").textContent = data.temperature + " °C";
-                document.getElementById("humValue").textContent = data.humidity + " %";
-
-                const date = new Date(data.timestamp);
-                const diffMs = Date.now() - date;
-                const diffSec = Math.round(diffMs / 1000);
-                const days = Math.floor(diffSec / 86400);
-                const hours = Math.floor((diffSec % 86400) / 3600);
-                const minutes = Math.floor((diffSec % 3600) / 60);
-                const seconds = diffSec % 60;
-
-                let timeText = "il y a : ";
-                if (days > 0) timeText += days + "j ";
-                if (hours > 0) timeText += hours + "h ";
-                if (minutes > 0) timeText += minutes + "min ";
-                timeText += seconds + "s (" + date.toLocaleTimeString() + ")";
-
-                document.getElementById("tempTime").textContent = timeText;
-                document.getElementById("humTime").textContent = timeText;
-
-                // Mise à jour du statut
-                document.getElementById("status").textContent = "● Connecté - Système opérationnel";
-                document.getElementById("status").className = "status-online";
-                document.getElementById("status-indicator").textContent = "🟢";
-            } catch (e) {
-                console.log("Erreur API :", e);
-                document.getElementById("status").textContent = "● En attente de données...";
-                document.getElementById("status").className = "status-offline";
-                document.getElementById("status-indicator").textContent = "🟡";
-            }
-        }
-
-        // Fonction pour charger les données du graphique
-        async function loadChartData(period) {
-            // Mettre à jour les boutons actifs
-            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Définir l'URL selon la période
-            let url = '/chart-data/';
-            if (period === 'jour') url = '/chart-data-jour/';
-            if (period === 'semaine') url = '/chart-data-semaine/';
-            if (period === 'mois') url = '/chart-data-mois/';
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                const labels = data.temps.map(t => new Date(t).toLocaleString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }));
-
-                // Mise à jour graphique température
-                tempChart.data.labels = labels;
-                tempChart.data.datasets[0].data = data.temperature;
-                tempChart.update();
-
-                // Mise à jour graphique humidité
-                humChart.data.labels = labels;
-                humChart.data.datasets[0].data = data.humidity;
-                humChart.update();
-            } catch (error) {
-                console.error('Erreur:', error);
-            }
-        }
-
-        // Fonction pour charger les statistiques
-        async function updateStatistics() {
-            try {
-                const response = await fetch('/api/');
-                const result = await response.json();
-                const allData = result.data;
-
-                if (allData && allData.length > 0) {
-                    const temperatures = allData.map(d => parseFloat(d.temp));
-                    const humidities = allData.map(d => parseFloat(d.hum));
-
-                    const avgTemp = temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
-                    const avgHum = humidities.reduce((a, b) => a + b, 0) / humidities.length;
-
-                    document.getElementById('total-records').textContent = allData.length;
-                    document.getElementById('avg-temp').textContent = avgTemp.toFixed(1) + '°C';
-                    document.getElementById('avg-hum').textContent = avgHum.toFixed(1) + '%';
-                }
-            } catch (error) {
-                console.error('Erreur statistiques:', error);
-            }
-        }
-
-        // Initialisation
-        updateLiveTime();
-        loadLatest();
-        loadChartData('all');
-        updateStatistics();
-
-        // Mises à jour automatiques
-        setInterval(updateLiveTime, 1000);
-        setInterval(loadLatest, 5000);
-        setInterval(updateStatistics, 30000);
-    </script>
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

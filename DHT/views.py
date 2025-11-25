@@ -139,3 +139,64 @@ def chart_data_mois(request):
         'humidity': [hum.hum for hum in dht]
     }
     return JsonResponse(data)
+
+
+from .models import Incident, ArchiveIncident
+
+
+def incident_status(request):
+    """API - Statut incident actuel"""
+    incident = Incident.objects.filter(actif=True).first()
+
+    if incident:
+        return JsonResponse({
+            "incident_actif": True,
+            "compteur": incident.compteur,
+            "date_debut": incident.date_debut.isoformat(),
+            "op1_checked": incident.op1_checked,
+            "op1_comment": incident.op1_comment,
+            "op2_checked": incident.op2_checked,
+            "op2_comment": incident.op2_comment,
+            "op3_checked": incident.op3_checked,
+            "op3_comment": incident.op3_comment,
+        })
+    else:
+        return JsonResponse({
+            "incident_actif": False,
+            "compteur": 0
+        })
+
+
+def update_incident(request):
+    """API - Mettre à jour incident"""
+    if request.method == 'POST':
+        incident = Incident.objects.filter(actif=True).first()
+        if not incident:
+            return JsonResponse({"error": "Aucun incident actif"}, status=400)
+
+        import json
+        data = json.loads(request.body)
+
+        if 'op1_checked' in data:
+            incident.op1_checked = data['op1_checked']
+        if 'op1_comment' in data:
+            incident.op1_comment = data['op1_comment']
+        if 'op2_checked' in data:
+            incident.op2_checked = data['op2_checked']
+        if 'op2_comment' in data:
+            incident.op2_comment = data['op2_comment']
+        if 'op3_checked' in data:
+            incident.op3_checked = data['op3_checked']
+        if 'op3_comment' in data:
+            incident.op3_comment = data['op3_comment']
+
+        incident.save()
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"error": "Méthode non autorisée"}, status=405)
+
+
+def archive_incidents(request):
+    """Page archive des incidents"""
+    archives = ArchiveIncident.objects.all()
+    return render(request, 'archive_incidents.html', {'archives': archives})

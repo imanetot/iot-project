@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive des Incidents - DHT11</title>
+    <link rel="stylesheet" href="/static/css/archive.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Retour Dashboard</a>
+        <h1>📂 Archive des Incidents</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Nombre d'Incidents</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for archive in archives %}
+                <tr>
+                    <td>{{ archive.date|date:"d/m/Y" }}</td>
+                    <td>{{ archive.nombre_incidents }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="no-data">Aucun incident archivé</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

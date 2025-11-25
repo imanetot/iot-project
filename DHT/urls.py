@@ -27,4 +27,7 @@ urlpatterns = [
     # Pages anciennes (compatibilité)
     path('index/', views.table, name='table'),
     path('myChart/', views.graphique, name='myChart'),
+    path('incident-status/', views.incident_status, name='incident_status'),
+    path('update-incident/', views.update_incident, name='update_incident'),
+    path('archive-incidents/', views.archive_incidents, name='archive_incidents'),
 ]

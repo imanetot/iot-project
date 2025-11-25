@@ -1,150 +1,69 @@
-// Configuration du graphique
-const ctx = document.getElementById('myChart').getContext('2d');
-
-const chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: [
-            {
-                label: 'Température (°C)',
-                data: [],
-                borderColor: '#4fc3f7',
-                backgroundColor: 'rgba(79, 195, 247, 0.1)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            },
-            {
-                label: 'Humidité (%)',
-                data: [],
-                borderColor: '#7b68ee',
-                backgroundColor: 'rgba(123, 104, 238, 0.1)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: {
-                labels: {
-                    color: '#e0e0e0',
-                    font: {
-                        size: 14,
-                        weight: '600'
-                    }
-                }
-            },
-            tooltip: {
-                backgroundColor: 'rgba(26, 26, 38, 0.9)',
-                titleColor: '#fff',
-                bodyColor: '#e0e0e0',
-                borderColor: '#4fc3f7',
-                borderWidth: 1
-            }
-        },
-        scales: {
-            x: {
-                ticks: {
-                    color: '#9e9eb0'
-                },
-                grid: {
-                    color: 'rgba(255, 255, 255, 0.05)'
-                }
-            },
-            y: {
-                ticks: {
-                    color: '#9e9eb0'
-                },
-                grid: {
-                    color: 'rgba(255, 255, 255, 0.08)'
-                }
-            }
-        }
-    }
-});
-
-// Fonction pour ajouter des données au graphique
-function addDataToChart(temp, hum) {
-    const now = new Date().toLocaleTimeString('fr-FR');
-
-    chart.data.labels.push(now);
-    chart.data.datasets[0].data.push(temp);
-    chart.data.datasets[1].data.push(hum);
-
-    // Limite à 20 points pour la performance
-    if (chart.data.labels.length > 20) {
-        chart.data.labels.shift();
-        chart.data.datasets[0].data.shift();
-        chart.data.datasets[1].data.shift();
-    }
-
-    chart.update();
-}
-
-// Fonction pour mettre à jour l'heure en direct
+// Fonction pour mettre à jour l'heure
 function updateLiveTime() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('fr-FR');
-    const timeElement = document.getElementById('live-time');
-    if (timeElement) {
-        timeElement.textContent = timeStr;
-    }
+    document.getElementById('live-time').textContent = now.toLocaleTimeString('fr-FR');
 }
 
-// Fonction pour mettre à jour les valeurs depuis l'API
-async function updateValues() {
+// Fonction pour charger les dernières données
+async function loadLatest() {
     try {
-        const response = await fetch('/latest/');
-        const data = await response.json();
+        const res = await fetch("/latest/");
+        const data = await res.json();
 
-        const temp = parseFloat(data.temperature);
-        const hum = parseFloat(data.humidity);
+        document.getElementById("tempValue").textContent = data.temperature + " °C";
+        document.getElementById("humValue").textContent = data.humidity + " %";
 
-        // Mise à jour des valeurs en direct
-        document.getElementById('current-temp').textContent = temp.toFixed(1);
-        document.getElementById('current-hum').textContent = hum.toFixed(1);
+        const date = new Date(data.timestamp);
+        const diffMs = Date.now() - date;
+        const diffSec = Math.round(diffMs / 1000);
+        const days = Math.floor(diffSec / 86400);
+        const hours = Math.floor((diffSec % 86400) / 3600);
+        const minutes = Math.floor((diffSec % 3600) / 60);
+        const seconds = diffSec % 60;
 
-        // Mise à jour des cartes principales
-        document.getElementById('temp-value').textContent = temp.toFixed(1);
-        document.getElementById('hum-value').textContent = hum.toFixed(1);
+        let timeText = "il y a : ";
+        if (days > 0) timeText += days + "j ";
+        if (hours > 0) timeText += hours + "h ";
+        if (minutes > 0) timeText += minutes + "min ";
+        timeText += seconds + "s (" + date.toLocaleTimeString() + ")";
 
-        const now = new Date().toLocaleString('fr-FR');
-        document.getElementById('temp-time').textContent = `Dernière mise à jour: ${now}`;
-        document.getElementById('hum-time').textContent = `Dernière mise à jour: ${now}`;
-
-        // Mise à jour du graphique
-        addDataToChart(temp, hum);
-
-        // Retirer l'effet de chargement
-        document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
+        document.getElementById("tempTime").textContent = timeText;
+        document.getElementById("humTime").textContent = timeText;
 
         // Mise à jour du statut
-        document.getElementById('status').textContent = '● Connecté - Système opérationnel';
-        const statusIndicator = document.getElementById('status-indicator');
-        if (statusIndicator) {
-            statusIndicator.textContent = '🟢';
-        }
-
-    } catch (error) {
-        console.error('Erreur lors de la récupération des données:', error);
-        document.getElementById('status').textContent = '● Erreur de connexion';
-        const statusIndicator = document.getElementById('status-indicator');
-        if (statusIndicator) {
-            statusIndicator.textContent = '🔴';
-        }
+        document.getElementById("status").textContent = "● Connecté - Système opérationnel";
+        document.getElementById("status").className = "status-online";
+        document.getElementById("status-indicator").textContent = "🟢";
+    } catch (e) {
+        console.log("Erreur API :", e);
+        document.getElementById("status").textContent = "● En attente de données...";
+        document.getElementById("status").className = "status-offline";
+        document.getElementById("status-indicator").textContent = "🟡";
     }
 }
 
-// Fonction pour récupérer les statistiques globales
+// Fonction pour charger les données du graphique
+async function loadChartData(period) {
+    // Mettre à jour les boutons actifs
+    document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    // Définir l'URL selon la période
+    let url = '/chart-data/';
+    if (period === 'jour') url = '/chart-data-jour/';
+    if (period === 'semaine') url = '/chart-data-semaine/';
+    if (period === 'mois') url = '/chart-data-mois/';
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log('Données chargées:', data);
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+// Fonction pour charger les statistiques
 async function updateStatistics() {
     try {
         const response = await fetch('/api/');
@@ -155,88 +74,114 @@ async function updateStatistics() {
             const temperatures = allData.map(d => parseFloat(d.temp));
             const humidities = allData.map(d => parseFloat(d.hum));
 
-            // Calcul des statistiques
-            const maxTemp = Math.max(...temperatures);
-            const minTemp = Math.min(...temperatures);
             const avgTemp = temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
-
-            const maxHum = Math.max(...humidities);
-            const minHum = Math.min(...humidities);
             const avgHum = humidities.reduce((a, b) => a + b, 0) / humidities.length;
 
-            // Mise à jour de l'interface
             document.getElementById('total-records').textContent = allData.length;
-            document.getElementById('max-temp').textContent = maxTemp.toFixed(1) + '°C';
-            document.getElementById('min-temp').textContent = minTemp.toFixed(1) + '°C';
             document.getElementById('avg-temp').textContent = avgTemp.toFixed(1) + '°C';
-            document.getElementById('max-hum').textContent = maxHum.toFixed(1) + '%';
-            document.getElementById('min-hum').textContent = minHum.toFixed(1) + '%';
             document.getElementById('avg-hum').textContent = avgHum.toFixed(1) + '%';
-
-            // Retirer l'effet de chargement
-            document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
         }
     } catch (error) {
-        console.error('Erreur lors de la récupération des statistiques:', error);
-        document.getElementById('total-records').textContent = '0';
+        console.error('Erreur statistiques:', error);
     }
 }
 
-// Fonction pour mettre à jour les données en direct
-async function updateLiveData() {
+// Gestion des incidents
+async function updateIncidentStatus() {
     try {
-        const response = await fetch('/latest/');
+        const response = await fetch('/incident-status/');
         const data = await response.json();
 
-        document.getElementById('current-temp').textContent = data.temperature.toFixed(1);
-        document.getElementById('current-hum').textContent = data.humidity.toFixed(1);
+        const statusDiv = document.getElementById('incident-status');
+        const detailsDiv = document.getElementById('incident-details');
+        const compteurSpan = document.getElementById('incident-compteur');
 
-        const updateTime = new Date(data.timestamp);
-        const lastUpdateElement = document.getElementById('last-update');
-        if (lastUpdateElement) {
-            lastUpdateElement.textContent = 'Dernière mise à jour: ' + updateTime.toLocaleString('fr-FR');
-        }
+        if (data.incident_actif) {
+            statusDiv.className = 'incident-status-alert';
+            statusDiv.innerHTML = '⚠️ INCIDENT EN COURS';
+            detailsDiv.className = 'incident-details-visible';
+            compteurSpan.textContent = data.compteur;
 
-        const statusIndicator = document.getElementById('status-indicator');
-        if (statusIndicator) {
-            statusIndicator.textContent = '🟢';
+            // Afficher opérations selon compteur
+            const op1 = document.getElementById('op1-container');
+            const op2 = document.getElementById('op2-container');
+            const op3 = document.getElementById('op3-container');
+
+            op1.className = data.compteur >= 1 ? 'operation-container op1-container op1-visible' : 'operation-container op1-container op1-hidden';
+            op2.className = data.compteur >= 4 ? 'operation-container op2-container op2-visible' : 'operation-container op2-container op2-hidden';
+            op3.className = data.compteur >= 7 ? 'operation-container op3-container op3-visible' : 'operation-container op3-container op3-hidden';
+
+            // Charger états sauvegardés
+            document.getElementById('op1-check').checked = data.op1_checked;
+            document.getElementById('op1-comment').value = data.op1_comment || '';
+            document.getElementById('op2-check').checked = data.op2_checked;
+            document.getElementById('op2-comment').value = data.op2_comment || '';
+            document.getElementById('op3-check').checked = data.op3_checked;
+            document.getElementById('op3-comment').value = data.op3_comment || '';
+        } else {
+            statusDiv.className = 'incident-status-ok';
+            statusDiv.innerHTML = '✅ Pas d\'incidents';
+            detailsDiv.className = 'incident-details-hidden';
         }
     } catch (error) {
-        const lastUpdateElement = document.getElementById('last-update');
-        if (lastUpdateElement) {
-            lastUpdateElement.textContent = 'En attente de données...';
-        }
-        const statusIndicator = document.getElementById('status-indicator');
-        if (statusIndicator) {
-            statusIndicator.textContent = '🟠';
-        }
+        console.error('Erreur mise à jour incidents:', error);
     }
 }
 
-// Fonction pour mettre à jour l'horloge
-function updateClock() {
-    const now = new Date();
-    const liveTimeElement = document.getElementById('live-time');
-    if (liveTimeElement) {
-        liveTimeElement.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+async function saveIncident() {
+    try {
+        const data = {
+            op1_checked: document.getElementById('op1-check').checked,
+            op1_comment: document.getElementById('op1-comment').value,
+            op2_checked: document.getElementById('op2-check').checked,
+            op2_comment: document.getElementById('op2-comment').value,
+            op3_checked: document.getElementById('op3-check').checked,
+            op3_comment: document.getElementById('op3-comment').value,
+        };
+
+        const response = await fetch('/update-incident/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            alert('✅ Opérations enregistrées avec succès!');
+        } else {
+            alert('❌ Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        console.error('Erreur sauvegarde incident:', error);
+        alert('❌ Erreur de connexion');
     }
 }
 
-// Initialisation au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard initialisé');
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 
-    // Première mise à jour
-    updateLiveTime();
-    updateValues();
-    updateStatistics();
-    updateLiveData();
-    updateClock();
+// Initialisation
+updateLiveTime();
+loadLatest();
+updateStatistics();
+updateIncidentStatus();
 
-    // Mises à jour automatiques
-    setInterval(updateLiveTime, 1000);
-    setInterval(updateClock, 1000);
-    setInterval(updateValues, 5000);
-    setInterval(updateStatistics, 30000);
-    setInterval(updateLiveData, 5000);
-});
+// Mises à jour automatiques
+setInterval(updateLiveTime, 1000);
+setInterval(loadLatest, 5000);
+setInterval(updateStatistics, 30000);
+setInterval(updateIncidentStatus, 5000);

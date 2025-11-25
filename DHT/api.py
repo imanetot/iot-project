@@ -1,6 +1,6 @@
 from django.core.mail import send_mail
 from DHT.utils import send_telegram, send_whatsapp
-from .models import Dht11
+from .models import Dht11, Incident
 from .serializers import DHT11serialize
 from rest_framework.decorators import api_view
 from rest_framework import status, generics
@@ -33,12 +33,17 @@ class Dhtviews(generics.CreateAPIView):
 
         # Seuil d'alerte (à ajuster selon vos besoins)
         SEUIL_TEMPERATURE = 25
-
+        incident_actif = Incident.objects.filter(actif=True).first()
         # Si la température dépasse le seuil
         if temp > SEUIL_TEMPERATURE:
-            # Message d'alerte
-            message = f"Alerte Température élevée!\nTempérature: {temp:.1f}°C\nHumidité: {hum:.1f}%\nDate: {instance.dt.strftime('%d/%m/%Y %H:%M:%S')}"
-
+            if not incident_actif:
+                # Créer nouvel incident
+                incident_actif = Incident.objects.create(compteur=1)
+            else:
+                # Incrémenter compteur
+                incident_actif.compteur += 1
+                incident_actif.save()
+            message = f"⚠️ Alerte Température élevée!\nTempérature: {temp:.1f}°C\nHumidité: {hum:.1f}%\nCompteur incidents: {incident_actif.compteur}"
             # 1) Envoi Email
             try:
                 send_mail(
@@ -65,3 +70,4 @@ class Dhtviews(generics.CreateAPIView):
                 print("Message WhatsApp envoyé avec succès")
             except Exception as e:
                 print(f" Erreur lors de l'envoi du message WhatsApp: {e}")
+                message = f"⚠️ Alerte Température élevée!\nTempérature: {temp:.1f}°C\nHumidité: {hum:.1f}%\nCompteur incidents: {incident_actif.compteur}"
