@@ -47,8 +47,6 @@ function updateData() {
     .catch(error => console.error('Erreur de récupération des données :', error));
 }
 
-updateData();
-setInterval(updateData, 20000);
 
-document.getElementById('refresh').addEventListener('click', getData);
-getData();
+
+

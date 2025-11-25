@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-_42oe4&wkls(d-f^_x+u#27sob6b(@tdkj#p+-aofkf6!9nc89
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.20.10.4']
+ALLOWED_HOSTS = ['100.96.187.16']
 
 
 # Application definition
@@ -127,4 +127,29 @@ import os
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),]
 STATIC_ROOT=os.path.join(BASE_DIR,'staticfiles')
+from django.core.mail import send_mail
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "imanejennane23@gmail.com"
+EMAIL_HOST_PASSWORD = "jscn tokw wric lwkj"
+
+TELEGRAM_BOT_TOKEN = "8559176194:AAF4tF3s7kSeyKjulNhkX0DsQlwAX4qCteM" # ← token
+TELEGRAM_CHAT_ID = "5468593557" # ← id utilisateur/groupe
+
+TWILIO_ACCOUNT_SID = "AC1f93399fc0e24ce16cd7f20dee3a45c1"
+TWILIO_AUTH_TOKEN = "333df877ed2390925bf283bfe0b744c2"
+TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"  # Twilio sandbox number
+TWILIO_WHATSAPP_TO = "whatsapp:+212624628677"  # your phone number with country code
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+}

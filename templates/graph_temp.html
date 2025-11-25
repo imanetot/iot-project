@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphique Température - DHT11</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/graph.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="btn-back">← Retour au Dashboard</a>
+            <h1>📈 Historique de la Température</h1>
+        </header>
+
+        <div class="chart-container">
+            <canvas id="tempChart"></canvas>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-label">Température actuelle</span>
+                <span class="stat-value" id="current-temp">--°C</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Température moyenne</span>
+                <span class="stat-value" id="avg-temp">--°C</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Température min</span>
+                <span class="stat-value" id="min-temp">--°C</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Température max</span>
+                <span class="stat-value" id="max-temp">--°C</span>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" data-period="all">Toutes les données</button>
+            <button class="filter-btn" data-period="jour">24 heures</button>
+            <button class="filter-btn" data-period="semaine">7 jours</button>
+            <button class="filter-btn" data-period="mois">30 jours</button>
+        </div>
+
+        <footer>
+            <p id="data-count">Chargement...</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/graph_temp.js"></script>
+</body>
+</html>

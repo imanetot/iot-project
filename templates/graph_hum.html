@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphique Humidité - DHT11</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/graph.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="btn-back">← Retour au Dashboard</a>
+            <h1>💧 Historique de l'Humidité</h1>
+        </header>
+
+        <div class="chart-container">
+            <canvas id="humChart"></canvas>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-label">Humidité actuelle</span>
+                <span class="stat-value" id="current-hum">--%</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Humidité moyenne</span>
+                <span class="stat-value" id="avg-hum">--%</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Humidité min</span>
+                <span class="stat-value" id="min-hum">--%</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Humidité max</span>
+                <span class="stat-value" id="max-hum">--%</span>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" data-period="all">Toutes les données</button>
+            <button class="filter-btn" data-period="jour">24 heures</button>
+            <button class="filter-btn" data-period="semaine">7 jours</button>
+            <button class="filter-btn" data-period="mois">30 jours</button>
+        </div>
+
+        <footer>
+            <p id="data-count">Chargement...</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/graph_hum.js"></script>
+</body>
+</html>

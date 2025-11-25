@@ -3,11 +3,28 @@ from . import views
 from . import api
 
 urlpatterns = [
-    path("api/",api.Dlist,name='json'),
-    path("api/post",api.Dhtviews.as_view(),name='json'),
+    # Page principale - Dashboard
+    path('', views.dashboard, name='dashboard'),
+
+    # Pages graphiques
+    path('graph_temp/', views.graph_temp, name='graph_temp'),
+    path('graph_hum/', views.graph_hum, name='graph_hum'),
+
+    # API endpoints
+    path('api/', api.Dlist, name='api_list'),
+    path('api/post/', api.Dhtviews.as_view(), name='api_post'),
+    path('latest/', views.latest_json, name='latest_json'),
+
+    # API données graphiques
+    path('chart-data/', views.chart_data, name='chart_data'),
+    path('chart-data-jour/', views.chart_data_jour, name='chart_data_jour'),
+    path('chart-data-semaine/', views.chart_data_semaine, name='chart_data_semaine'),
+    path('chart-data-mois/', views.chart_data_mois, name='chart_data_mois'),
+
+    # Utilitaires
     path('download_csv/', views.download_csv, name='download_csv'),
-    path('index/',views.table,name='table'),
-    path('myChart/',views.graphique,name='myChart'),
-    path('',views.dashboard,name='dashboard'),
-    path("latest/", views.latest_json, name="latest_json"),
-    ]
+
+    # Pages anciennes (compatibilité)
+    path('index/', views.table, name='table'),
+    path('myChart/', views.graphique, name='myChart'),
+]
