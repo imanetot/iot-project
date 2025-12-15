@@ -19,6 +19,11 @@
                 <li><a href="/api/">API</a></li>
                 <li><a href="/download_csv/">Export CSV</a></li>
                 <li><a href="/admin/">Admin</a></li>
+                <li>
+                    <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()">
+                        🌙 Mode Sombre
+                    </button>
+                </li>
             </ul>
         </div>
     </nav>
@@ -36,25 +41,38 @@
             <div class="live-grid">
                 <div class="live-card">
                     <div class="live-icon">🌡️</div>
-                    <div class="live-value" id="tempValue">--</div>
+                    <div class="live-value" id="current-temp">--</div>
                     <div class="live-label">Température (°C)</div>
-                    <div class="live-time-info" id="tempTime">Chargement...</div>
+                    <div class="live-time-info" id="last-update">Chargement...</div>
                     <a href="/graph_temp/" class="btn-graph-small">📈 Voir Graphique</a>
                 </div>
 
                 <div class="live-card">
                     <div class="live-icon">💧</div>
-                    <div class="live-value" id="humValue">--</div>
+                    <div class="live-value" id="current-hum">--</div>
                     <div class="live-label">Humidité (%)</div>
-                    <div class="live-time-info" id="humTime">Chargement...</div>
+                    <div class="live-time-info" id="hum-time">Chargement...</div>
                     <a href="/graph_hum/" class="btn-graph-small">📈 Voir Graphique</a>
                 </div>
+            </div>
+        </div>
 
-                <div class="live-card">
-                    <div class="live-icon">🕐</div>
-                    <div class="live-value" id="live-time">--:--</div>
-                    <div class="live-label">Heure Actuelle</div>
+        <!-- Manual Data Entry Section -->
+        <div class="manual-entry-section">
+            <h2 class="live-title">✏️ Entrée Manuelle de Données</h2>
+            <div class="manual-entry-card">
+                <div class="input-group">
+                    <label for="manual-temp">🌡️ Température (°C):</label>
+                    <input type="number" id="manual-temp" step="0.1" placeholder="Ex: 25.5">
                 </div>
+                <div class="input-group">
+                    <label for="manual-hum">💧 Humidité (%):</label>
+                    <input type="number" id="manual-hum" step="0.1" placeholder="Ex: 60.0">
+                </div>
+                <button onclick="submitManualData()" class="btn-submit-manual">
+                    📤 Envoyer les Données
+                </button>
+                <div id="manual-entry-message" class="manual-entry-message"></div>
             </div>
         </div>
 
@@ -82,32 +100,37 @@
                 <div id="op1-container" class="operation-container op1-hidden">
                     <div class="operation-header">
                         <input type="checkbox" id="op1-check" class="operation-checkbox">
-                        <label for="op1-check" class="operation-label">✓ Opération Corrective 1</label>
+                        <label for="op1-check" class="operation-label" id="op1-label">✓ Opération Corrective 1</label>
                     </div>
                     <textarea id="op1-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea" rows="3"></textarea>
+                    <button id="op1-btn" class="btn-validate-op" onclick="saveOperation(1)">
+                        ✓ Valider Opération 1
+                    </button>
                 </div>
 
                 <!-- Opération 2 -->
                 <div id="op2-container" class="operation-container op2-hidden">
                     <div class="operation-header">
                         <input type="checkbox" id="op2-check" class="operation-checkbox">
-                        <label for="op2-check" class="operation-label">✓ Opération Corrective 2</label>
+                        <label for="op2-check" class="operation-label" id="op2-label">✓ Opération Corrective 2</label>
                     </div>
                     <textarea id="op2-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea" rows="3"></textarea>
+                    <button id="op2-btn" class="btn-validate-op" onclick="saveOperation(2)">
+                        ✓ Valider Opération 2
+                    </button>
                 </div>
 
                 <!-- Opération 3 -->
                 <div id="op3-container" class="operation-container op3-hidden">
                     <div class="operation-header">
                         <input type="checkbox" id="op3-check" class="operation-checkbox">
-                        <label for="op3-check" class="operation-label">✓ Opération Corrective 3 </label>
+                        <label for="op3-check" class="operation-label" id="op3-label">✓ Opération Corrective 3</label>
                     </div>
                     <textarea id="op3-comment" placeholder="Commentaires (facultatif)..." class="operation-textarea" rows="3"></textarea>
+                    <button id="op3-btn" class="btn-validate-op" onclick="saveOperation(3)">
+                        ✓ Valider Opération 3
+                    </button>
                 </div>
-
-                <button onclick="saveIncident()" class="btn-save-incident">
-                    💾 Enregistrer les Opérations
-                </button>
             </div>
 
             <div style="margin-top: 20px;">

@@ -12,6 +12,13 @@ from django.db.models.functions import TruncDate
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+from .models import Incident
+from django.core.mail import send_mail
+from DHT.utils import send_telegram, send_whatsapp
+from django.conf import settings
 
 def index_view(request):
     """Page d'accueil - redirige vers le dashboard"""
@@ -158,18 +165,17 @@ def incident_status(request):
             "compteur": incident.compteur,
             "date_debut": incident.date_debut.isoformat(),
             "op1_checked": incident.op1_checked,
-            "op1_comment": incident.op1_comment,
+            "op1_comment": incident.op1_comment or "",
             "op2_checked": incident.op2_checked,
-            "op2_comment": incident.op2_comment,
+            "op2_comment": incident.op2_comment or "",
             "op3_checked": incident.op3_checked,
-            "op3_comment": incident.op3_comment,
+            "op3_comment": incident.op3_comment or "",
         })
     else:
         return JsonResponse({
             "incident_actif": False,
             "compteur": 0
         })
-
 
 def update_incident(request):
     """API - Mettre à jour incident"""
@@ -305,7 +311,7 @@ def download_incidents_excel(request):
         ws.cell(row=row_num, column=11).value = incident.op3_comment or ''
 
         # Appliquer les bordures
-        for col in range(1, 11):
+        for col in range(1, 12):
             ws.cell(row=row_num, column=col).border = border
             ws.cell(row=row_num, column=col).alignment = Alignment(vertical="center")
 
@@ -339,3 +345,163 @@ def download_incidents_excel(request):
 
     wb.save(response)
     return response
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def check_create_incident(request):
+    """
+    Vérifie la température et crée/met à jour un incident si nécessaire
+    """
+    try:
+        data = json.loads(request.body)
+        temperature = float(data.get('temperature', 0))
+
+        # Vérifier si température anormale
+        if temperature < 2 or temperature > 8:
+            # Chercher un incident actif
+            incident = Incident.objects.filter(actif=True).first()
+
+            if incident:
+                # Incident existe déjà, incrémenter le compteur
+                incident.compteur += 1
+                incident.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Incident mis à jour',
+                    'compteur': incident.compteur,
+                    'created': False
+                })
+            else:
+                # Créer un nouvel incident
+                incident = Incident.objects.create(
+                    actif=True,
+                    compteur=1,
+                    date_debut=timezone.now()
+                )
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Incident créé',
+                    'compteur': incident.compteur,
+                    'created': True
+                })
+        else:
+            # Température normale, fermer l'incident s'il existe
+            incident = Incident.objects.filter(actif=True).first()
+            if incident:
+                incident.actif = False
+                incident.date_fin = timezone.now()
+                incident.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Incident fermé',
+                    'closed': True
+                })
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Pas d\'incident à créer'
+            })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def manual_data_entry(request):
+    """
+    Permet l'entrée manuelle de données de température et d'humidité
+    """
+    try:
+        data = json.loads(request.body)
+        temperature = float(data.get('temperature', 0))
+        humidity = float(data.get('humidity', 0))
+
+        # Validation
+        if humidity < 0 or humidity > 100:
+            return JsonResponse({
+                'success': False,
+                'error': 'L\'humidité doit être entre 0 et 100%'
+            }, status=400)
+
+        # Créer une nouvelle entrée DHT11
+        dht_entry = Dht11.objects.create(
+            temp=temperature,
+            hum=humidity
+        )
+
+        # Vérifier si température anormale pour créer/mettre à jour incident
+        if temperature < 2 or temperature > 8:
+            incident = Incident.objects.filter(actif=True).first()
+
+            if incident:
+                # Incident existe déjà, incrémenter le compteur
+                if incident.compteur < 9:
+                    incident.compteur += 1
+                    incident.save()
+            else:
+                # Créer un nouvel incident
+                incident = Incident.objects.create(
+                    actif=True,
+                    compteur=1,
+                    date_debut=timezone.now()
+                )
+
+            message = f"⚠️ Alerte Température anormale!\nTempérature: {temperature:.1f}°C\nHumidité: {humidity:.1f}%\nCompteur incidents: {incident.compteur}"
+
+            # Envoi des notifications
+            try:
+                send_mail(
+                    subject="Alerte Température - Entrée Manuelle",
+                    message=message,
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=["imanejennane23@gmail.com"],
+                    fail_silently=False,
+                )
+                print("✅ Email envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi de l'email: {e}")
+
+            try:
+                send_telegram(message)
+                print("✅ Message Telegram envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi du message Telegram: {e}")
+
+            try:
+                send_whatsapp(message)
+                print("✅ Message WhatsApp envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi du message WhatsApp: {e}")
+
+        else:
+            # Température normale - fermer l'incident si actif
+            incident = Incident.objects.filter(actif=True).first()
+            if incident:
+                incident.actif = False
+                incident.date_fin = timezone.now()
+                incident.save()
+                print(f"✅ Incident {incident.id} fermé - Température normale")
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Données enregistrées avec succès',
+            'id': dht_entry.id,
+            'temperature': temperature,
+            'humidity': humidity
+        })
+
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': 'Valeurs invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

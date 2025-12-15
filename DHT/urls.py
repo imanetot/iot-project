@@ -35,4 +35,9 @@ urlpatterns = [
     path('incident-status/', views.incident_status, name='incident_status'),
     path('update-incident/', views.update_incident, name='update_incident'),
     path('archive-incidents/', views.archive_incidents, name='archive_incidents'),
+    path('api/check-create-incident/', views.check_create_incident, name='check_create_incident'),
+    path('download_incidents_excel/', views.download_incidents_excel, name='download_incidents_excel'),
+
+    # Manual data entry
+    path('api/manual-entry/', views.manual_data_entry, name='manual_data_entry'),
 ]

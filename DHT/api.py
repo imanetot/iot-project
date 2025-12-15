@@ -32,19 +32,19 @@ class Dhtviews(generics.CreateAPIView):
         temp = instance.temp
         hum = instance.hum
 
-        # Seuil d'alerte
-        SEUIL_TEMPERATURE = 25
+        # Seuils d'alerte
         incident_actif = Incident.objects.filter(actif=True).first()
 
         # Si la température dépasse le seuil
-        if temp > SEUIL_TEMPERATURE:
+        if temp < 2 or temp > 8:
             if not incident_actif:
                 # Créer nouvel incident
                 incident_actif = Incident.objects.create(compteur=1)
             else:
-                # Incrémenter compteur
-                incident_actif.compteur += 1
-                incident_actif.save()
+                # Incrémenter compteur (max 9)
+                if incident_actif.compteur < 9:
+                    incident_actif.compteur += 1
+                    incident_actif.save()
 
             message = f"⚠️ Alerte Température élevée!\nTempérature: {temp:.1f}°C\nHumidité: {hum:.1f}%\nCompteur incidents: {incident_actif.compteur}"
 
