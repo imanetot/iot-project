@@ -1,10 +1,10 @@
 // URLs API
 const API_URL = '/latest/';
+const API_POST_URL = '/api/post/';
 const INCIDENT_STATUS_URL = '/incident-status/';
 const UPDATE_INCIDENT_URL = '/update-incident/';
-const MANUAL_ENTRY_URL = '/api/manual-entry/';
 
-// Theme toggle
+// ==================== DARK MODE FUNCTIONALITY ====================
 function toggleTheme() {
     const body = document.body;
     const themeBtn = document.getElementById('theme-toggle');
@@ -20,7 +20,7 @@ function toggleTheme() {
     }
 }
 
-// Load saved theme
+// Load saved theme on page load
 document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme');
     const themeBtn = document.getElementById('theme-toggle');
@@ -33,76 +33,65 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Manual data entry
+// ==================== MANUAL DATA SUBMISSION ====================
 async function submitManualData() {
     const tempInput = document.getElementById('manual-temp');
     const humInput = document.getElementById('manual-hum');
-    const messageEl = document.getElementById('manual-entry-message');
+    const btn = document.querySelector('.btn-submit-manual');
 
-    const temperature = parseFloat(tempInput.value);
-    const humidity = parseFloat(humInput.value);
+    const temp = parseFloat(tempInput.value);
+    const hum = parseFloat(humInput.value);
 
     // Validation
-    if (isNaN(temperature) || isNaN(humidity)) {
-        messageEl.textContent = '⚠️ Veuillez entrer des valeurs valides';
-        messageEl.className = 'manual-entry-message error';
-        messageEl.style.display = 'block';
+    if (isNaN(temp) || isNaN(hum)) {
+        showNotification('⚠️ Veuillez entrer des valeurs valides', 'warning');
         return;
     }
 
-    if (humidity < 0 || humidity > 100) {
-        messageEl.textContent = '⚠️ L\'humidité doit être entre 0 et 100%';
-        messageEl.className = 'manual-entry-message error';
-        messageEl.style.display = 'block';
+    if (hum < 0 || hum > 100) {
+        showNotification('⚠️ L\'humidité doit être entre 0 et 100%', 'warning');
         return;
     }
+
+    // Disable button during submission
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Envoi...';
 
     try {
-        const response = await fetch(MANUAL_ENTRY_URL, {
+        const response = await fetch(API_POST_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                temperature: temperature,
-                humidity: humidity
+                temp: temp,
+                hum: hum
             })
         });
 
-        const data = await response.json();
-
-        if (data.success) {
-            messageEl.textContent = '✅ Données enregistrées avec succès!';
-            messageEl.className = 'manual-entry-message success';
-            messageEl.style.display = 'block';
-
-            // Clear inputs
+        if (response.ok) {
+            showNotification('✅ Données enregistrées', 'success');
             tempInput.value = '';
             humInput.value = '';
 
-            // Refresh data immediately
+            // Refresh data
             await getData();
             await getIncidentStatus();
-
-            // Hide message after 3 seconds
-            setTimeout(() => {
-                messageEl.style.display = 'none';
-            }, 3000);
         } else {
-            messageEl.textContent = '❌ Erreur: ' + data.error;
-            messageEl.className = 'manual-entry-message error';
-            messageEl.style.display = 'block';
+            showNotification('❌ Erreur d\'enregistrement', 'error');
         }
     } catch (error) {
-        messageEl.textContent = '❌ Erreur de connexion';
-        messageEl.className = 'manual-entry-message error';
-        messageEl.style.display = 'block';
-        console.error('Error:', error);
+        console.error('Erreur:', error);
+        showNotification('❌ Erreur de connexion', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
-// Récupérer et afficher le statut de l'incident
+// ==================== INCIDENT STATUS ====================
 async function getIncidentStatus() {
     try {
         const res = await fetch(INCIDENT_STATUS_URL);
@@ -114,7 +103,7 @@ async function getIncidentStatus() {
         const dateDebutEl = document.getElementById('incident-date-debut');
 
         if (data.incident_actif) {
-            // Incident actif - afficher en rouge
+            // Incident détecté - afficher en rouge
             statusEl.textContent = '⚠️ Incident détecté!';
             statusEl.className = 'incident-status-alert';
             detailsEl.classList.remove('incident-details-hidden');
@@ -124,36 +113,57 @@ async function getIncidentStatus() {
             const dateDebut = new Date(data.date_debut);
             dateDebutEl.textContent = dateDebut.toLocaleString('fr-FR');
 
-            // Charger les états des opérations et leurs noms
-            document.getElementById('op1-check').checked = data.op1_checked;
-            document.getElementById('op1-comment').value = data.op1_comment || '';
-            document.getElementById('op1-label').textContent = '✓ ' + (data.nom_op1 || 'Opération Corrective 1');
+            // Charger les états des opérations SANS RÉINITIALISER
+            const op1Check = document.getElementById('op1-check');
+            const op2Check = document.getElementById('op2-check');
+            const op3Check = document.getElementById('op3-check');
 
-            document.getElementById('op2-check').checked = data.op2_checked;
-            document.getElementById('op2-comment').value = data.op2_comment || '';
-            document.getElementById('op2-label').textContent = '✓ ' + (data.nom_op2 || 'Opération Corrective 2');
+            // Ne mettre à jour que si la valeur a changé pour éviter de réinitialiser l'input utilisateur
+            if (op1Check.checked !== data.op1_checked) {
+                op1Check.checked = data.op1_checked || false;
+            }
+            if (op2Check.checked !== data.op2_checked) {
+                op2Check.checked = data.op2_checked || false;
+            }
+            if (op3Check.checked !== data.op3_checked) {
+                op3Check.checked = data.op3_checked || false;
+            }
 
-            document.getElementById('op3-check').checked = data.op3_checked;
-            document.getElementById('op3-comment').value = data.op3_comment || '';
-            document.getElementById('op3-label').textContent = '✓ ' + (data.nom_op3 || 'Opération Corrective 3');
+            // Charger les commentaires seulement s'ils sont vides
+            const op1Comment = document.getElementById('op1-comment');
+            const op2Comment = document.getElementById('op2-comment');
+            const op3Comment = document.getElementById('op3-comment');
+
+            if (!op1Comment.value && data.op1_comment) {
+                op1Comment.value = data.op1_comment;
+            }
+            if (!op2Comment.value && data.op2_comment) {
+                op2Comment.value = data.op2_comment;
+            }
+            if (!op3Comment.value && data.op3_comment) {
+                op3Comment.value = data.op3_comment;
+            }
 
             // Afficher les opérations selon le compteur
             const op1Container = document.getElementById('op1-container');
             const op2Container = document.getElementById('op2-container');
             const op3Container = document.getElementById('op3-container');
 
+            // Opération 1: compteur >= 1
             if (data.compteur >= 1) {
                 op1Container.classList.remove('op1-hidden');
             } else {
                 op1Container.classList.add('op1-hidden');
             }
 
+            // Opération 2: compteur >= 4
             if (data.compteur >= 4) {
                 op2Container.classList.remove('op2-hidden');
             } else {
                 op2Container.classList.add('op2-hidden');
             }
 
+            // Opération 3: compteur >= 7
             if (data.compteur >= 7) {
                 op3Container.classList.remove('op3-hidden');
             } else {
@@ -176,7 +186,7 @@ async function getIncidentStatus() {
     }
 }
 
-// Sauvegarder une opération spécifique
+// ==================== SAVE OPERATION (COMMENTAIRES OPTIONNELS) ====================
 async function saveOperation(opNumber) {
     const checkId = `op${opNumber}-check`;
     const commentId = `op${opNumber}-comment`;
@@ -185,13 +195,7 @@ async function saveOperation(opNumber) {
     const isChecked = document.getElementById(checkId).checked;
     const comment = document.getElementById(commentId).value.trim();
 
-    // Validation: checkbox doit être cochée (obligatoire)
-    if (!isChecked) {
-        alert('⚠️ Veuillez cocher la case avant de valider l\'opération!');
-        return;
-    }
-
-    // Désactiver le bouton pendant la sauvegarde
+    // PAS DE VALIDATION - commentaires optionnels
     const btn = document.getElementById(btnId);
     const originalText = btn.textContent;
     btn.disabled = true;
@@ -215,22 +219,44 @@ async function saveOperation(opNumber) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`✅ Opération ${opNumber} enregistrée avec succès!`);
-            // Rafraîchir le statut après sauvegarde
-            await getIncidentStatus();
+            showNotification(`✅ Opération ${opNumber} enregistrée`, 'success');
+            // Ne pas recharger pour éviter de perdre les inputs
         } else {
-            alert('❌ Erreur: ' + (data.error || 'Erreur inconnue'));
+            showNotification('❌ Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
         }
     } catch (e) {
-        alert('❌ Erreur lors de la sauvegarde: ' + e.message);
+        showNotification('❌ Erreur de sauvegarde', 'error');
     } finally {
-        // Réactiver le bouton
         btn.disabled = false;
         btn.textContent = originalText;
     }
 }
 
-// Get CSRF token from cookies
+// ==================== UTILITY FUNCTIONS ====================
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+
+    const hours = diffHour;
+    const minutes = diffMin % 60;
+    const seconds = diffSec % 60;
+
+    let result = 'il y a ';
+    if (hours > 0) {
+        result += hours + ' heure' + (hours > 1 ? 's' : '') + ' ';
+    }
+    if (minutes > 0) {
+        result += minutes + ' minute' + (minutes > 1 ? 's' : '') + ' ';
+    }
+    if (seconds > 0 || (hours === 0 && minutes === 0)) {
+        result += seconds + ' seconde' + (seconds > 1 ? 's' : '');
+    }
+    return result.trim();
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -246,7 +272,7 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Fetch latest data
+// ==================== FETCH LATEST DATA ====================
 async function getData() {
     try {
         const res = await fetch(API_URL);
@@ -254,22 +280,46 @@ async function getData() {
 
         document.getElementById('current-temp').textContent = data.temperature.toFixed(1) + '°C';
         document.getElementById('current-hum').textContent = data.humidity.toFixed(1) + '%';
-        document.getElementById('last-update').textContent = new Date(data.timestamp).toLocaleString('fr-FR');
-        document.getElementById('hum-time').textContent = new Date(data.timestamp).toLocaleString('fr-FR');
 
-        // Update status
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = '● En ligne';
-        statusEl.className = 'status-online';
+        const timeAgo = getTimeAgo(new Date(data.timestamp));
+        document.getElementById('last-update').textContent = 'Mis à jour ' + timeAgo;
+        document.getElementById('last-update-hum').textContent = 'Mis à jour ' + timeAgo;
+
+        document.getElementById('status').className = 'stat-value status-online';
+        document.getElementById('status').textContent = '● En ligne';
+
+        // Check for incidents based on current temperature
+        await checkForIncidents(data.temperature);
     } catch (e) {
         console.error('Erreur getData:', e);
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = '● Hors ligne';
-        statusEl.className = 'status-offline';
+        document.getElementById('status').className = 'stat-value status-offline';
+        document.getElementById('status').textContent = '● Hors ligne';
     }
 }
 
-// Fetch all data for stats
+// ==================== CHECK FOR INCIDENTS ====================
+async function checkForIncidents(temperature) {
+    try {
+        const res = await fetch('/api/check-create-incident/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ temperature: temperature })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            console.log('Incident check:', data.message);
+            // Refresh incident status after checking
+            await getIncidentStatus();
+        }
+    } catch (e) {
+        console.error('Erreur checkForIncidents:', e);
+    }
+}
+
+// ==================== FETCH STATISTICS ====================
 async function getStats() {
     try {
         const res = await fetch('/api/');
@@ -293,12 +343,42 @@ async function getStats() {
     }
 }
 
-// Initialisation au chargement de la page
+// ==================== INITIALIZATION ====================
 getData();
 getStats();
 getIncidentStatus();
 
-// Auto-refresh
+// Auto-refresh (réduit pour éviter de perdre les inputs)
 setInterval(getData, 10000); // Every 10 seconds
 setInterval(getStats, 30000); // Every 30 seconds
-setInterval(getIncidentStatus, 5000); // Every 5 seconds
+setInterval(getIncidentStatus, 10000); // Every 10 seconds (augmenté de 5s à 10s)
+
+// ==================== NOTIFICATION SYSTEM ====================
+function showNotification(message, type = 'info') {
+    // Remove existing notification if any
+    const existing = document.querySelector('.toast-notification');
+    if (existing) {
+        existing.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `toast-notification toast-${type}`;
+    notification.textContent = message;
+
+    // Add to body
+    document.body.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}

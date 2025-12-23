@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-_42oe4&wkls(d-f^_x+u#27sob6b(@tdkj#p+-aofkf6!9nc89
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.176']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -153,3 +153,16 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
 }
+# MQTT Broker Configuration
+MQTT_BROKER = "broker.hivemq.com"  # Public broker (change for production)
+# MQTT_BROKER = "localhost"  # For local Mosquitto broker
+MQTT_PORT = 1883
+MQTT_CLIENT_ID = "django_dht11_iot_client"
+
+# MQTT Topics
+MQTT_TOPIC_SUBSCRIBE = "dht11/sensors"  # Topic to receive sensor data
+MQTT_TOPIC_PUBLISH = "dht11/alerts"     # Topic to publish alerts
+
+# Optional: MQTT Authentication (uncomment if broker requires auth)
+# MQTT_USERNAME = "your_username"
+# MQTT_PASSWORD = "your_password"

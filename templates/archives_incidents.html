@@ -14,19 +14,33 @@
         <table>
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Nombre d'Incidents</th>
+                    <th>ID</th>
+                    <th>Date Début</th>
+                    <th>Date Fin</th>
+                    <th>Compteur</th>
+                    <th>Opération Atteinte</th>
+                    <th>Commentaires</th>
                 </tr>
             </thead>
             <tbody>
                 {% for archive in archives %}
                 <tr>
-                    <td>{{ archive.date|date:"d/m/Y" }}</td>
-                    <td>{{ archive.nombre_incidents }}</td>
+                    <td>{{ archive.id }}</td>
+                    <td>{{ archive.date_debut|date:"d/m/Y H:i" }}</td>
+                    <td>{{ archive.date_fin|date:"d/m/Y H:i" }}</td>
+                    <td>{{ archive.compteur }}</td>
+                    <td>
+                        {% if archive.op3_checked %}Opération 3{% elif archive.op2_checked %}Opération 2{% elif archive.op1_checked %}Opération 1{% else %}Aucune{% endif %}
+                    </td>
+                    <td>
+                        {% if archive.op1_comment %}<strong>Op1:</strong> {{ archive.op1_comment }}<br>{% endif %}
+                        {% if archive.op2_comment %}<strong>Op2:</strong> {{ archive.op2_comment }}<br>{% endif %}
+                        {% if archive.op3_comment %}<strong>Op3:</strong> {{ archive.op3_comment }}{% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="2" class="no-data">Aucun incident archivé</td>
+                    <td colspan="6" class="no-data">Aucun incident archivé</td>
                 </tr>
                 {% endfor %}
             </tbody>

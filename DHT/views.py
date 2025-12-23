@@ -1,11 +1,9 @@
-from django.http import HttpResponse
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from .models import Dht11
+from .models import Dht11, Incident, ArchiveIncident
 import csv
 from .serializers import DHT11serialize
 from django.shortcuts import render
-from .models import Dht11
 import datetime
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -15,10 +13,10 @@ from openpyxl.utils import get_column_letter
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
-from .models import Incident
 from django.core.mail import send_mail
 from DHT.utils import send_telegram, send_whatsapp
 from django.conf import settings
+
 
 def index_view(request):
     """Page d'accueil - redirige vers le dashboard"""
@@ -152,9 +150,6 @@ def chart_data_mois(request):
     return JsonResponse(data)
 
 
-from .models import Incident, ArchiveIncident
-
-
 def incident_status(request):
     """API - Statut incident actuel"""
     incident = Incident.objects.filter(actif=True).first()
@@ -177,16 +172,17 @@ def incident_status(request):
             "compteur": 0
         })
 
+
 def update_incident(request):
-    """API - Mettre à jour incident"""
+    """API - Mettre à jour incident - COMMENTAIRES OPTIONNELS"""
     if request.method == 'POST':
         incident = Incident.objects.filter(actif=True).first()
         if not incident:
             return JsonResponse({"error": "Aucun incident actif"}, status=400)
 
-        import json
         data = json.loads(request.body)
 
+        # Mise à jour sans validation obligatoire des commentaires
         if 'op1_checked' in data:
             incident.op1_checked = data['op1_checked']
         if 'op1_comment' in data:
@@ -207,30 +203,13 @@ def update_incident(request):
 
 
 def archive_incidents(request):
-    """Page archive des incidents avec calcul automatique"""
-    # Compter les incidents fermés par date
-    incidents_par_date = Incident.objects.filter(actif=False).annotate(
-        date=TruncDate('date_debut')
-    ).values('date').annotate(
-        nombre=Count('id')
-    ).order_by('-date')
-
-    # Créer ou mettre à jour les archives
-    for item in incidents_par_date:
-        ArchiveIncident.objects.update_or_create(
-            date=item['date'],
-            defaults={'nombre_incidents': item['nombre']}
-        )
-
-    # Récupérer toutes les archives
-    archives = ArchiveIncident.objects.all().order_by('-date')
-
+    """Page archive des incidents avec détails complets"""
+    archives = ArchiveIncident.objects.all().order_by('-date_debut')
     return render(request, 'archives_incidents.html', {'archives': archives})
 
 
 def download_incidents_excel(request):
     """Téléchargement Excel de tous les incidents"""
-    # Créer un nouveau workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Incidents DHT11"
@@ -263,85 +242,70 @@ def download_incidents_excel(request):
         cell.alignment = header_alignment
         cell.border = border
 
-    # Récupérer tous les incidents (actifs et fermés)
-    incidents = Incident.objects.all().order_by('-date_debut')
+    # Récupérer tous les incidents
+    incidents = list(Incident.objects.all().order_by('-date_debut'))
+    archives = list(ArchiveIncident.objects.all().order_by('-date_debut'))
+    all_incidents = incidents + archives
 
     # Remplir les données
-    for row_num, incident in enumerate(incidents, 2):
-        # ID
-        ws.cell(row=row_num, column=1).value = incident.id
+    for row_num, incident in enumerate(all_incidents, 2):
+        if hasattr(incident, 'actif'):
+            ws.cell(row=row_num, column=1).value = incident.id
+            statut = 'Actif' if incident.actif else 'Fermé'
+        else:
+            ws.cell(row=row_num, column=1).value = f"A{incident.id}"
+            statut = 'Archivé'
 
-        # Date Début
         ws.cell(row=row_num, column=2).value = incident.date_debut.strftime('%d/%m/%Y %H:%M:%S')
-
-        # Date Fin
         date_fin = incident.date_fin.strftime('%d/%m/%Y %H:%M:%S') if incident.date_fin else 'En cours'
         ws.cell(row=row_num, column=3).value = date_fin
-
-        # Compteur
         ws.cell(row=row_num, column=4).value = incident.compteur
 
-        # Statut
-        statut = 'Actif' if incident.actif else 'Fermé'
         statut_cell = ws.cell(row=row_num, column=5)
         statut_cell.value = statut
 
-        # Colorer le statut
-        if incident.actif:
+        if statut == 'Actif':
             statut_cell.fill = PatternFill(start_color="FFE699", end_color="FFE699", fill_type="solid")
-        else:
+        elif statut == 'Fermé':
             statut_cell.fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+        else:
+            statut_cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
 
-        # Opération 1
+        # Opérations
         op1_cell = ws.cell(row=row_num, column=6)
         op1_cell.value = '✓' if incident.op1_checked else '✗'
         op1_cell.font = Font(color="00B050" if incident.op1_checked else "FF0000", bold=True)
         ws.cell(row=row_num, column=7).value = incident.op1_comment or ''
 
-        # Opération 2
         op2_cell = ws.cell(row=row_num, column=8)
         op2_cell.value = '✓' if incident.op2_checked else '✗'
         op2_cell.font = Font(color="00B050" if incident.op2_checked else "FF0000", bold=True)
         ws.cell(row=row_num, column=9).value = incident.op2_comment or ''
 
-        # Opération 3
         op3_cell = ws.cell(row=row_num, column=10)
         op3_cell.value = '✓' if incident.op3_checked else '✗'
         op3_cell.font = Font(color="00B050" if incident.op3_checked else "FF0000", bold=True)
         ws.cell(row=row_num, column=11).value = incident.op3_comment or ''
 
-        # Appliquer les bordures
         for col in range(1, 12):
             ws.cell(row=row_num, column=col).border = border
             ws.cell(row=row_num, column=col).alignment = Alignment(vertical="center")
 
-    # Ajuster la largeur des colonnes
+    # Ajuster largeurs
     column_widths = {
-        'A': 8,  # ID
-        'B': 20,  # Date Début
-        'C': 20,  # Date Fin
-        'D': 12,  # Compteur
-        'E': 12,  # Statut
-        'F': 15,  # Op1
-        'G': 30,  # Commentaire Op1
-        'H': 15,  # Op2
-        'I': 30,  # Commentaire Op2
-        'J': 15,  # Op3
-        'K': 30,  # Commentaire Op3
+        'A': 8, 'B': 20, 'C': 20, 'D': 12, 'E': 12,
+        'F': 15, 'G': 30, 'H': 15, 'I': 30, 'J': 15, 'K': 30
     }
 
     for col, width in column_widths.items():
         ws.column_dimensions[col].width = width
 
-    # Figer la première ligne
     ws.freeze_panes = 'A2'
 
-    # Créer la réponse HTTP
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response[
-        'Content-Disposition'] = f'attachment; filename="incidents_dht11_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="incidents_dht11_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
 
     wb.save(response)
     return response
@@ -350,22 +314,21 @@ def download_incidents_excel(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_create_incident(request):
-    """
-    Vérifie la température et crée/met à jour un incident si nécessaire
-    """
+    """Vérifie la température et crée/met à jour un incident si nécessaire"""
     try:
         data = json.loads(request.body)
         temperature = float(data.get('temperature', 0))
 
-        # Vérifier si température anormale
         if temperature < 2 or temperature > 8:
-            # Chercher un incident actif
             incident = Incident.objects.filter(actif=True).first()
+            now = timezone.now()
 
             if incident:
-                # Incident existe déjà, incrémenter le compteur
-                incident.compteur += 1
-                incident.save()
+                if incident.compteur < 9:
+                    if (not incident.last_increment) or ((now - incident.last_increment).total_seconds() >= 10):
+                        incident.compteur += 1
+                        incident.last_increment = now
+                        incident.save()
 
                 return JsonResponse({
                     'success': True,
@@ -374,11 +337,11 @@ def check_create_incident(request):
                     'created': False
                 })
             else:
-                # Créer un nouvel incident
                 incident = Incident.objects.create(
                     actif=True,
                     compteur=1,
-                    date_debut=timezone.now()
+                    date_debut=timezone.now(),
+                    last_increment=now
                 )
 
                 return JsonResponse({
@@ -388,12 +351,24 @@ def check_create_incident(request):
                     'created': True
                 })
         else:
-            # Température normale, fermer l'incident s'il existe
             incident = Incident.objects.filter(actif=True).first()
             if incident:
-                incident.actif = False
-                incident.date_fin = timezone.now()
-                incident.save()
+                # Archiver l'incident
+                ArchiveIncident.objects.create(
+                    date_debut=incident.date_debut,
+                    date_fin=timezone.now(),
+                    compteur=incident.compteur,
+                    nom_op1=incident.nom_op1,
+                    op1_checked=incident.op1_checked,
+                    op1_comment=incident.op1_comment,
+                    nom_op2=incident.nom_op2,
+                    op2_checked=incident.op2_checked,
+                    op2_comment=incident.op2_comment,
+                    nom_op3=incident.nom_op3,
+                    op3_checked=incident.op3_checked,
+                    op3_comment=incident.op3_comment,
+                )
+                incident.delete()
 
                 return JsonResponse({
                     'success': True,
@@ -415,11 +390,12 @@ def check_create_incident(request):
 def manual_data_entry(request):
     """
     Permet l'entrée manuelle de données de température et d'humidité
+    FONCTION MANQUANTE - MAINTENANT AJOUTÉE!
     """
     try:
         data = json.loads(request.body)
-        temperature = float(data.get('temperature', 0))
-        humidity = float(data.get('humidity', 0))
+        temperature = float(data.get('temp', 0))
+        humidity = float(data.get('hum', 0))
 
         # Validation
         if humidity < 0 or humidity > 100:
@@ -436,19 +412,23 @@ def manual_data_entry(request):
 
         # Vérifier si température anormale pour créer/mettre à jour incident
         if temperature < 2 or temperature > 8:
+            now = timezone.now()
             incident = Incident.objects.filter(actif=True).first()
 
             if incident:
-                # Incident existe déjà, incrémenter le compteur
+                # Incident existe déjà, incrémenter le compteur toutes les 10s max
                 if incident.compteur < 9:
-                    incident.compteur += 1
-                    incident.save()
+                    if (not incident.last_increment) or ((now - incident.last_increment).total_seconds() >= 10):
+                        incident.compteur += 1
+                        incident.last_increment = now
+                        incident.save()
             else:
                 # Créer un nouvel incident
                 incident = Incident.objects.create(
                     actif=True,
                     compteur=1,
-                    date_debut=timezone.now()
+                    date_debut=timezone.now(),
+                    last_increment=now
                 )
 
             message = f"⚠️ Alerte Température anormale!\nTempérature: {temperature:.1f}°C\nHumidité: {humidity:.1f}%\nCompteur incidents: {incident.compteur}"
@@ -482,10 +462,23 @@ def manual_data_entry(request):
             # Température normale - fermer l'incident si actif
             incident = Incident.objects.filter(actif=True).first()
             if incident:
-                incident.actif = False
-                incident.date_fin = timezone.now()
-                incident.save()
-                print(f"✅ Incident {incident.id} fermé - Température normale")
+                # Archiver l'incident
+                ArchiveIncident.objects.create(
+                    date_debut=incident.date_debut,
+                    date_fin=timezone.now(),
+                    compteur=incident.compteur,
+                    nom_op1=incident.nom_op1,
+                    op1_checked=incident.op1_checked,
+                    op1_comment=incident.op1_comment,
+                    nom_op2=incident.nom_op2,
+                    op2_checked=incident.op2_checked,
+                    op2_comment=incident.op2_comment,
+                    nom_op3=incident.nom_op3,
+                    op3_checked=incident.op3_checked,
+                    op3_comment=incident.op3_comment,
+                )
+                incident.delete()
+                print(f"✅ Incident fermé - Température normale")
 
         return JsonResponse({
             'success': True,
