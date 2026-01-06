@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -72,11 +74,17 @@ WSGI_APPLICATION = 'projet.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
+'''DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+}'''
+DATABASES = {
+    'default': dj_database_url.config(
+        default='postgresql://postgres:postgres@localhost:5432/mysite',
+        conn_max_age=600
+    )
 }
 
 
@@ -113,13 +121,13 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = '/static/'
 import os
-STATICFILES_DIRS = [ BASE_DIR / 'static' ]
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
+STATIC_URL = '/static/'
+
+if not DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import os
@@ -177,3 +185,19 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+# ==================== NTFY.SH PUSH NOTIFICATIONS ====================
+# Enable/disable ntfy notifications
+NTFY_ENABLED = True  # Set to False to disable
+
+# Multiple users - uncomment this for multiple recipients
+NTFY_TOPICS = [
+    'alarm_projet_iot_',  # First person's unique topic
+    #'temp_alarm_user2_unique_abc',  # Second person's unique topic
+]
+
+# Instructions for users:
+# 1. Install ntfy app on your phone (iOS/Android)
+# 2. Subscribe to your unique topic (e.g., 'temp_alarm_user1_unique_xyz')
+# 3. Enable notifications in your phone settings
+# 4. Test by sending: curl -d "test" ntfy.sh/your_topic_name

@@ -1,7 +1,7 @@
-# views.py - CRITICAL FIXES
-
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
+from rest_framework.decorators import api_view
+
 from .models import Dht11, Incident, IncidentComment, ArchiveIncident, UserProfile, TemperatureThreshold
 import csv
 from .serializers import DHT11serialize
@@ -19,8 +19,8 @@ from django.conf import settings
 import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from rest_framework import viewsets
-
+from rest_framework import viewsets, generics
+from DHT.ntfy_notifications import send_ntfy_to_multiple_users
 
 # ==================== AUTHENTICATION ====================
 
@@ -414,16 +414,137 @@ def admin_panel(request):
 
     return render(request, 'admin/admin_panel.html', context)
 
-
-# ==================== API VIEWS ====================
-
+@api_view(['GET'])
 def Dlist(request):
-    """API - Liste de toutes les données DHT11"""
-    dht = Dht11.objects.all().order_by('-dt')
-    serializer = DHT11serialize(dht, many=True)
-    return JsonResponse(serializer.data, safe=False)
+    """
+    Récupérer toutes les données DHT11
+    """
+    all_data = Dht11.objects.all()
+    data = DHT11serialize(all_data, many=True).data
+    return Response({'data': data})
 
 
-class Dhtviews(viewsets.ModelViewSet):
-    queryset = Dht11.objects.all().order_by('-dt')
+class Dhtviews(generics.CreateAPIView):
+    """
+    Créer une nouvelle entrée DHT11 avec alertes automatiques
+    """
+    queryset = Dht11.objects.all()
     serializer_class = DHT11serialize
+
+    # ========== NOTICE: perform_create MUST BE INDENTED INSIDE THE CLASS ==========
+    def perform_create(self, serializer):
+        # Sauvegarder l'instance
+        instance = serializer.save()
+        temp = instance.temp
+        hum = instance.hum
+
+        # Get temperature thresholds
+        threshold = TemperatureThreshold.objects.first()
+        if not threshold:
+            threshold = TemperatureThreshold.objects.create(min_temp=2.0, max_temp=8.0)
+
+        min_temp = threshold.min_temp
+        max_temp = threshold.max_temp
+
+        # Chercher incident actif
+        incident_actif = Incident.objects.filter(actif=True).first()
+        now = timezone.now()
+
+        # Si la température est anormale (EN DEHORS de la plage)
+        if temp < min_temp or temp > max_temp:
+            if not incident_actif:
+                # Créer nouvel incident
+                incident_actif = Incident.objects.create(
+                    actif=True,
+                    compteur=1,
+                    last_increment=now,
+                    temperature=temp,
+                    humidity=hum,
+                    status='en_cours'
+                )
+            else:
+                # Incrémenter compteur (max 9)
+                if incident_actif.compteur < 9:
+                    if (not incident_actif.last_increment) or ((now - incident_actif.last_increment).total_seconds() >= 10):
+                        incident_actif.compteur += 1
+                        incident_actif.last_increment = now
+                        incident_actif.temperature = temp
+                        incident_actif.humidity = hum
+                        incident_actif.save()
+
+            message = f"⚠️ Alerte Température anormale!\nTempérature: {temp:.1f}°C\nHumidité: {hum:.1f}%\nCompteur incidents: {incident_actif.compteur}"
+
+            # ========== ADD NTFY PUSH NOTIFICATION HERE ==========
+            # Send urgent push notification to mobile devices via ntfy.sh
+            try:
+                send_ntfy_to_multiple_users(
+                    temperature=temp,
+                    humidity=hum,
+                    incident_count=incident_actif.compteur
+                )
+                print("✅ Ntfy push notification sent to mobile devices")
+            except Exception as e:
+                print(f"❌ Error sending ntfy notification: {e}")
+            # ========== END NTFY NOTIFICATION ==========
+
+            # Envoi des notifications
+            try:
+                send_mail(
+                    subject="Alerte Température anormale",
+                    message=message,
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=["imanejennane23@gmail.com"],
+                    fail_silently=False,
+                )
+                print("✅ Email envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi de l'email: {e}")
+
+            try:
+                send_telegram(message)
+                print("✅ Message Telegram envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi du message Telegram: {e}")
+
+            try:
+                send_whatsapp(message)
+                print("✅ Message WhatsApp envoyé avec succès")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi du message WhatsApp: {e}")
+
+        else:
+            # *** FIX: Température NORMALE (ENTRE min et max) - FERMER l'incident ***
+            if incident_actif:
+                # Archiver l'incident avant de fermer
+                ArchiveIncident.objects.create(
+                    date_debut=incident_actif.date_debut,
+                    date_fin=timezone.now(),
+                    compteur=incident_actif.compteur,
+                    status='termine',
+                    temperature=incident_actif.temperature,
+                    humidity=incident_actif.humidity,
+                    nom_op1=incident_actif.nom_op1,
+                    op1_checked=incident_actif.op1_checked,
+                    op1_comment=incident_actif.op1_comment or '',
+                    op1_operateur_name=incident_actif.op1_operateur.username if incident_actif.op1_operateur else '',
+                    op1_date=incident_actif.op1_date,
+                    nom_op2=incident_actif.nom_op2,
+                    op2_checked=incident_actif.op2_checked,
+                    op2_comment=incident_actif.op2_comment or '',
+                    op2_operateur_name=incident_actif.op2_operateur.username if incident_actif.op2_operateur else '',
+                    op2_date=incident_actif.op2_date,
+                    nom_op3=incident_actif.nom_op3,
+                    op3_checked=incident_actif.op3_checked,
+                    op3_comment=incident_actif.op3_comment or '',
+                    op3_operateur_name=incident_actif.op3_operateur.username if incident_actif.op3_operateur else '',
+                    op3_date=incident_actif.op3_date,
+                )
+
+                # Fermer l'incident
+                incident_actif.actif = False
+                incident_actif.date_fin = timezone.now()
+                incident_actif.status = 'termine'
+                incident_actif.last_increment = None
+                incident_actif.save()
+
+                print(f"✅ Incident {incident_actif.id} fermé - Température normale: {temp}°C")

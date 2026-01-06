@@ -17,7 +17,7 @@ from django.conf import settings
 import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
+from DHT.ntfy_notifications import send_ntfy_to_multiple_users
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -240,6 +240,15 @@ def manual_data_entry(request):
                 print(f"✅ New incident created ID={incident.id}")
 
             message = f"⚠️ Alerte!\nTemp: {temperature:.1f}°C (range: {min_temp}-{max_temp}°C)\nHum: {humidity:.1f}%\nCompteur: {incident.compteur}/9"
+            try:
+                send_ntfy_to_multiple_users(
+                    temperature=temperature,
+                    humidity=humidity,
+                    incident_count=incident.compteur
+                )
+                print("✅ Ntfy notification sent for manual entry")
+            except Exception as e:
+                print(f"❌ Error sending ntfy: {e}")
 
             try:
                 send_mail(

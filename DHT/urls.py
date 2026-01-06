@@ -21,7 +21,7 @@ urlpatterns = [
 
     # API endpoints
     path('api/', api.Dlist, name='api_list'),
-    path('api/post/', api.Dhtviews.as_view({'get': 'list', 'post': 'create'}), name='api_post'),
+    path('api/post/', api.Dhtviews.as_view(), name='api_post'),
     path('latest/', views.latest_json, name='latest_json'),
 
     # API données graphiques
